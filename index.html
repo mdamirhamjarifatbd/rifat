@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Crash - Multiplayer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --bg: #0b0e14; --card: #151a24; --accent: #00e676; --danger: #ff5252; --warning: #ffab40; }
+        body { margin: 0; background: var(--bg); font-family: 'Poppins', sans-serif; color: white; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        
+        #game-screen { position: relative; width: 100%; max-width: 500px; height: 380px; background: radial-gradient(circle at center, #1e293b, #0b0e14); overflow: hidden; border-bottom: 2px solid #222; }
+        
+        .balance-top-right {
+            position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.6);
+            padding: 8px 15px; border-radius: 20px; border: 1px solid var(--accent);
+            color: var(--accent); font-weight: bold; font-size: 14px; z-index: 100;
+        }
+
+        #multiplier { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 70px; font-weight: 900; z-index: 10; font-family: 'Monospace'; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #rocket { position: absolute; bottom: 40px; left: 40px; font-size: 50px; z-index: 5; filter: drop-shadow(0 0 15px var(--accent)); will-change: transform; }
+        #game-status { position: absolute; top: 20px; width: 100%; text-align: center; color: var(--warning); font-weight: bold; font-size: 16px; z-index: 20; }
+        
+        /* --- ১০ সেকেন্ড সার্কুলার টাইমার --- */
+        .timer-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 140px; height: 140px; display: none; z-index: 1001;
+        }
+        .timer-svg { transform: rotate(-90deg); width: 140px; height: 140px; }
+        .timer-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 8; }
+        .timer-bar {
+            fill: none; stroke: var(--accent); stroke-width: 8;
+            stroke-dasharray: 440; stroke-dashoffset: 440;
+            stroke-linecap: round; transition: stroke-dashoffset 1s linear;
+        }
+        #timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; font-weight: bold; color: var(--accent); }
+
+        #win-popup { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: var(--accent); color: #000; padding: 15px 40px; border-radius: 50px; 
+            font-size: 26px; font-weight: bold; display: none; z-index: 1000; 
+            box-shadow: 0 0 30px var(--accent); white-space: nowrap;
+        }
+
+        @keyframes winAnimate {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            80% { transform: translate(-50%, -100%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -180%) scale(0.8); opacity: 0; }
+        }
+
+        .controls { width: 100%; max-width: 500px; padding: 25px; background: var(--card); border-radius: 30px 30px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
+        .input-group { background: #0b0e14; border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid #333; }
+        input { background: transparent; border: none; color: white; font-size: 24px; font-weight: bold; width: 100%; text-align: center; outline: none; }
+        
+        .btn-main { width: 100%; height: 60px; border-radius: 15px; border: none; font-size: 20px; font-weight: bold; color: white; cursor: pointer; text-transform: uppercase; transition: 0.3s; }
+        #betBtn { background: var(--accent); color: #000; }
+        #cashBtn { background: var(--warning); color: #000; display: none; }
+        .btn-main:disabled { opacity: 0.5; filter: grayscale(1); }
+    </style>
+</head>
+<body>
+
+    <div id="game-screen">
+        <div class="balance-top-right">
+            <i class="fas fa-wallet"></i> <span id="userBal">0.00</span> ৳
+        </div>
+        
+        <div id="game-status">CONNECTING...</div>
+        <div id="multiplier">1.00x</div>
+
+        <div class="timer-container" id="timerBox">
+            <svg class="timer-svg">
+                <circle class="timer-bg" cx="70" cy="70" r="65"></circle>
+                <circle class="timer-bar" id="timerBar" cx="70" cy="70" r="65"></circle>
+            </svg>
+            <div id="timer-text">10</div>
+        </div>
+        
+        <div id="win-popup">WIN!</div>
+        <div id="rocket">🚀</div>
+    </div>
+
+    <div class="controls">
+        <div class="input-group">
+            <input type="number" id="betAmount" value="10" min="1">
+        </div>
+        <button id="betBtn" class="btn-main" onclick="placeBet()">PLACE BET</button>
+        <button id="cashBtn" class="btn-main" onclick="cashOut()">Cash Out</button>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, get, update, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyChTxo_8hg_6y2e5BvXQWcpMW-j_wGSOLs",
+        authDomain: "mygameonlin.firebaseapp.com",
+        databaseURL: "https://mygameonlin-default-rtdb.firebaseio.com",
+        projectId: "mygameonlin",
+        storageBucket: "mygameonlin.firebasestorage.app",
+        messagingSenderId: "847986328262",
+        appId: "1:847986328262:web:823c64f1faf63f768c4dc7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const urlParams = new URLSearchParams(window.location.search);
+    const userPhone = urlParams.get('user');
+
+    let currentBalance = 0;
+    let myBet = 0;
+    let hasPlacedBet = false;
+    let hasCashedOut = false;
+    let rocketX = 0; let rocketY = 0;
+    let animId;
+
+    onValue(ref(db, 'multiplayer_game'), (snapshot) => {
+        const data = snapshot.val();
+        if(!data) return;
+
+        const { state, multiplier, statusText } = data;
+        
+        if (state === "WAITING") {
+            cancelAnimationFrame(animId);
+            startCircleTimer(10);
+            resetUI();
+            document.getElementById('multiplier').style.opacity = "0.2";
+        } else if (state === "RUNNING") {
+            document.getElementById('timerBox').style.display = 'none';
+            document.getElementById('multiplier').style.opacity = "1";
+            document.getElementById('multiplier').innerText = multiplier.toFixed(2) + "x";
+            document.getElementById('game-status').innerText = statusText;
+            
+            // স্মুথ মুভমেন্ট কল
+            requestSmoothRocket(multiplier);
+
+            if(hasPlacedBet && !hasCashedOut) {
+                document.getElementById('betBtn').style.display = 'none';
+                document.getElementById('cashBtn').style.display = 'block';
+            }
+        } else if (state === "CRASHED") {
+            cancelAnimationFrame(animId);
+            handleCrash(multiplier);
+        }
+    });
+
+    function startCircleTimer(seconds) {
+        const timerBox = document.getElementById('timerBox');
+        const timerBar = document.getElementById('timerBar');
+        const timerText = document.getElementById('timerText');
+        
+        timerBox.style.display = 'block';
+        let timeLeft = seconds;
+        const totalDash = 410; // পরিধি
+
+        let countdown = setInterval(() => {
+            timeLeft--;
+            let offset = totalDash - (timeLeft / seconds) * totalDash;
+            timerBar.style.strokeDashoffset = offset;
+            timerText.innerText = timeLeft > 0 ? timeLeft : "0";
+
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                timerBox.style.display = 'none';
+            }
+        }, 1000);
+    }
+
+    function requestSmoothRocket(m) {
+        const rocket = document.getElementById('rocket');
+        const targetX = (m - 1) * 75; 
+        const targetY = (m - 1) * 48;
+
+        function animate() {
+            rocketX += (targetX - rocketX) * 0.1; // ০.১ দিয়ে স্মুথ ইন্টারপোলেশন
+            rocketY += (targetY - rocketY) * 0.1;
+            rocket.style.transform = `translate(${rocketX}px, -${rocketY}px)`;
+            animId = requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    if(userPhone) {
+        onValue(ref(db, 'users/' + userPhone), (snap) => {
+            if(snap.exists()){
+                currentBalance = snap.val().balance;
+                document.getElementById('userBal').innerText = currentBalance.toFixed(2);
+            }
+        });
+    }
+
+    window.placeBet = async () => {
+        const amt = parseFloat(document.getElementById('betAmount').value);
+        if(!userPhone) return alert("Please Login First");
+        if(currentBalance < amt) return alert("Insufficient Balance");
+
+        const gameSnap = await get(ref(db, 'multiplayer_game/state'));
+        if(gameSnap.val() !== "WAITING") return alert("Wait for next round!");
+
+        myBet = amt;
+        hasPlacedBet = true;
+        await update(ref(db, 'users/' + userPhone), { balance: currentBalance - myBet });
+        
+        document.getElementById('betBtn').disabled = true;
+        document.getElementById('betBtn').innerText = "BET PLACED...";
+    };
+
+    window.cashOut = async () => {
+        if(!hasPlacedBet || hasCashedOut) return;
+        hasCashedOut = true;
+        const currentMult = parseFloat(document.getElementById('multiplier').innerText);
+        const winAmt = parseFloat((myBet * currentMult).toFixed(2));
+
+        await update(ref(db, 'users/' + userPhone), { balance: currentBalance + winAmt });
+        await set(ref(db, 'history/' + Date.now()), {
+            user: userPhone, amount: winAmt, type: 'Added', time: new Date().toLocaleString()
+        });
+
+        const popup = document.getElementById('win-popup');
+        popup.innerText = "WIN +" + winAmt + "৳";
+        popup.style.display = 'block';
+        popup.style.animation = 'winAnimate 2s forwards';
+
+        document.getElementById('cashBtn').style.display = 'none';
+        document.getElementById('betBtn').style.display = 'block';
+        document.getElementById('betBtn').disabled = true;
+    };
+
+    function handleCrash(m) {
+        document.getElementById('multiplier').innerText = m.toFixed(2) + "x";
+        document.getElementById('multiplier').style.color = "#ff5252";
+        document.getElementById('rocket').style.opacity = "0";
+        document.getElementById('game-status').innerText = "CRASHED!";
+        document.getElementById('cashBtn').style.display = 'none';
+        document.getElementById('betBtn').style.display = 'block';
+        document.getElementById('betBtn').disabled = true;
+    }
+
+    function resetUI() {
+        hasPlacedBet = false; hasCashedOut = false;
+        rocketX = 0; rocketY = 0;
+        document.getElementById('multiplier').style.color = "white";
+        document.getElementById('multiplier').innerText = "1.00x";
+        document.getElementById('rocket').style.opacity = "1";
+        document.getElementById('rocket').style.transform = `translate(0px, 0px)`;
+        
+        const popup = document.getElementById('win-popup');
+        popup.style.display = 'none';
+        popup.style.animation = 'none';
+        
+        document.getElementById('betBtn').disabled = false;
+        document.getElementById('betBtn').innerText = "PLACE BET";
+    }
+</script>
+</body>
+</html>
