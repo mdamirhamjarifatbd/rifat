@@ -3,135 +3,279 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rocket Crash - Offline Version</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>API Based Online Rocket Crash</title>
     <style>
-        :root { --bg: #0b0e14; --card: #151a24; --accent: #00e676; --danger: #ff5252; --warning: #ffab40; }
-        body { margin: 0; background: var(--bg); font-family: 'Poppins', sans-serif; color: white; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
-        
-        #game-screen { position: relative; width: 100%; max-width: 500px; height: 380px; background: radial-gradient(circle at center, #1e293b, #0b0e14); overflow: hidden; border-bottom: 2px solid #222; }
-        
-        #multiplier { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 70px; font-weight: 900; z-index: 10; font-family: 'Monospace'; text-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        #rocket { position: absolute; bottom: 40px; left: 40px; font-size: 50px; z-index: 5; transition: transform 0.1s linear; filter: drop-shadow(0 0 15px var(--accent)); }
-        
-        /* ১০ সেকেন্ডের সার্কুলার টাইমার */
-        .timer-container {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 140px; height: 140px; display: none; z-index: 1001;
+        :root {
+            --bg-color: #050a18;
+            --accent-green: #00e676;
+            --danger-red: #ff5252;
+            --card-bg: #151a24;
         }
-        .timer-svg { transform: rotate(-90deg); width: 140px; height: 140px; }
-        .timer-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 8; }
-        .timer-bar {
-            fill: none; stroke: var(--accent); stroke-width: 8;
-            stroke-dasharray: 440; stroke-dashoffset: 440;
-            stroke-linecap: round; transition: stroke-dashoffset 1s linear;
-        }
-        #timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; font-weight: bold; color: var(--accent); }
 
-        .controls { width: 100%; max-width: 500px; padding: 25px; background: var(--card); border-radius: 30px 30px 0 0; text-align: center; }
-        .btn-main { width: 90%; height: 60px; border-radius: 15px; border: none; font-size: 20px; font-weight: bold; color: #000; cursor: pointer; background: var(--accent); }
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ব্যালেন্স ডিসপ্লে */
+        .header-bar {
+            width: 100%;
+            max-width: 450px;
+            padding: 15px;
+            display: flex;
+            justify-content: flex-end;
+            box-sizing: border-box;
+        }
+        .balance-badge {
+            background: rgba(0, 230, 118, 0.1);
+            border: 1px solid var(--accent-green);
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 450px;
+            flex: 1;
+            background: radial-gradient(circle at top, #1a2c5a, #050a18);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #multiplier {
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 75px;
+            font-weight: 900;
+            color: var(--accent-green);
+            z-index: 10;
+        }
+
+        #rocket {
+            position: absolute;
+            bottom: 40px;
+            left: 20px;
+            font-size: 60px;
+            z-index: 5;
+            transform: rotate(45deg);
+            filter: drop-shadow(0 0 15px var(--accent-green));
+            transition: transform 0.1s linear;
+        }
+
+        /* গোল টাইমার ডিজাইন */
+        .timer-wrap {
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 130px;
+            height: 130px;
+            display: none;
+            z-index: 100;
+        }
+        svg { width: 130px; height: 130px; transform: rotate(-90deg); }
+        circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+        .bg-circle { stroke: rgba(255,255,255,0.05); }
+        .progress-circle {
+            stroke: var(--accent-green);
+            stroke-dasharray: 377;
+            stroke-dashoffset: 377;
+            transition: stroke-dashoffset 1s linear;
+        }
+        #timer-num {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        /* কন্ট্রোল এরিয়া */
+        .footer {
+            width: 100%;
+            max-width: 450px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 30px 30px 0 0;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .bet-input {
+            width: 100%;
+            background: #0b0e14;
+            border: 1px solid #333;
+            color: white;
+            padding: 15px;
+            font-size: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .btn-main {
+            width: 100%;
+            height: 60px;
+            background: var(--accent-green);
+            border: none;
+            border-radius: 15px;
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-cashout { background: var(--warning, #ffab40); display: none; }
     </style>
 </head>
 <body>
 
-    <div id="game-screen">
-        <div id="multiplier">1.00x</div>
-
-        <div class="timer-container" id="timerBox">
-            <svg class="timer-svg">
-                <circle class="timer-bg" cx="70" cy="70" r="65"></circle>
-                <circle class="timer-bar" id="timerBar" cx="70" cy="70" r="65"></circle>
-            </svg>
-            <div id="timer-text">10</div>
-        </div>
-        
-        <div id="rocket">🚀</div>
+    <div class="header-bar">
+        <div class="balance-badge">৳ <span id="balance">0.00</span></div>
     </div>
 
-    <div class="controls">
-        <button id="actionBtn" class="btn-main">WAITING...</button>
+    <div id="game-container">
+        <div id="multiplier">1.00x</div>
+        <div id="rocket">🚀</div>
+
+        <div class="timer-wrap" id="timerBox">
+            <svg>
+                <circle class="bg-circle" cx="65" cy="65" r="60"></circle>
+                <circle class="progress-circle" id="circleBar" cx="65" cy="65" r="60"></circle>
+            </svg>
+            <div id="timer-num">10</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <input type="number" id="betAmount" class="bet-input" value="10">
+        <button id="betBtn" class="btn-main" onclick="placeBet()">PLACE BET</button>
+        <button id="cashBtn" class="btn-main btn-cashout" onclick="cashOut()">CASH OUT</button>
     </div>
 
 <script>
+    // --- অ্যাডমিন এপিআই সেটিংস ---
+    const API_URL = "আপনার_এডমিন_প্যানেল_লিঙ্ক/api/balance.php"; // এখান থেকে ব্যালেন্স আপডেট হবে
+    const urlParams = new URLSearchParams(window.location.search);
+    const userPhone = urlParams.get('user');
+
+    let currentBalance = 1000; // ডিফল্ট ব্যালেন্স (এপিআই থেকে আসবে)
+    let myBet = 0;
     let multiplier = 1.00;
-    let isRunning = false;
-    let crashPoint = 0;
-    let gameLoop;
+    let isFlying = false;
+    let hasCashedOut = false;
+    let gameInterval;
 
-    const multDisplay = document.getElementById('multiplier');
-    const rocket = document.getElementById('rocket');
-    const actionBtn = document.getElementById('actionBtn');
-    const timerBox = document.getElementById('timerBox');
-    const timerBar = document.getElementById('timerBar');
-    const timerText = document.getElementById('timerText');
+    // ১. ব্যালেন্স লোড করা (আপনার অ্যাডমিন এপিআই থেকে)
+    async function fetchUserBalance() {
+        if(!userPhone) return;
+        try {
+            const response = await fetch(`${API_URL}?phone=${userPhone}`);
+            const data = await response.json();
+            currentBalance = data.balance;
+            document.getElementById('balance').innerText = currentBalance.toFixed(2);
+        } catch (e) { console.log("API Error, using local storage"); }
+    }
 
-    // গেম শুরু করার লজিক
-    function startNewRound() {
-        // ১. ১০ সেকেন্ডের টাইমার শুরু
+    // ২. গেম লজিক (অটোমেটিক চলবে)
+    function startLoop() {
         multiplier = 1.00;
-        isRunning = false;
-        multDisplay.innerText = "1.00x";
-        multDisplay.style.color = "white";
-        rocket.style.opacity = "1";
-        rocket.style.transform = `translate(0px, 0px)`;
+        hasCashedOut = false;
+        document.getElementById('multiplier').style.color = "var(--accent-green)";
+        document.getElementById('rocket').style.opacity = "1";
+        document.getElementById('rocket').style.transform = "translate(0,0) rotate(45deg)";
         
         showTimer(10);
     }
 
-    function showTimer(seconds) {
-        timerBox.style.display = 'block';
-        let timeLeft = seconds;
-        actionBtn.innerText = "NEXT ROUND IN " + timeLeft + "s";
-        
+    function showTimer(sec) {
+        document.getElementById('timerBox').style.display = 'block';
+        let left = sec;
         let countdown = setInterval(() => {
-            timeLeft--;
-            let offset = 440 - (timeLeft / seconds) * 440;
-            timerBar.style.strokeDashoffset = offset;
-            timerText.innerText = timeLeft;
-            actionBtn.innerText = "NEXT ROUND IN " + timeLeft + "s";
-
-            if (timeLeft <= 0) {
+            left--;
+            document.getElementById('circleBar').style.strokeDashoffset = 377 - (left/sec)*377;
+            document.getElementById('timer-num').innerText = left;
+            if(left <= 0) {
                 clearInterval(countdown);
-                timerBox.style.display = 'none';
-                launchRocket();
+                document.getElementById('timerBox').style.display = 'none';
+                launch();
             }
         }, 1000);
     }
 
-    function launchRocket() {
-        isRunning = true;
-        crashPoint = (Math.random() * 5 + 1.1).toFixed(2); // ১.১ থেকে ৫ এর মধ্যে যেকোনো জায়গায় ক্রাশ হবে
-        actionBtn.innerText = "ROCKET IS FLYING!";
+    function launch() {
+        isFlying = true;
+        let crashPoint = (Math.random() * 3 + 1.1).toFixed(2);
         
-        gameLoop = setInterval(() => {
-            multiplier += 0.03; // বিমানের স্পিড
-            multDisplay.innerText = multiplier.toFixed(2) + "x";
-            
-            // বিমান উপরে ওঠার অ্যানিমেশন
-            let x = (multiplier - 1) * 60;
-            let y = (multiplier - 1) * 40;
-            rocket.style.transform = `translate(${x}px, -${y}px)`;
+        if(myBet > 0) {
+            document.getElementById('betBtn').style.display = 'none';
+            document.getElementById('cashBtn').style.display = 'block';
+        }
 
-            // ক্রাশ লজিক
-            if (multiplier >= crashPoint) {
-                clearInterval(gameLoop);
-                crashGame();
+        gameInterval = setInterval(() => {
+            multiplier += 0.03;
+            document.getElementById('multiplier').innerText = multiplier.toFixed(2) + "x";
+            
+            // রকেটের সুন্দর কোণাকুণি মুভমেন্ট
+            let x = (multiplier - 1) * 80;
+            let y = (multiplier - 1) * 60;
+            document.getElementById('rocket').style.transform = `translate(${x}px, -${y}px) rotate(45deg)`;
+
+            if(multiplier >= crashPoint) {
+                clearInterval(gameInterval);
+                doCrash();
             }
         }, 100);
     }
 
-    function crashGame() {
-        isRunning = false;
-        multDisplay.style.color = "#ff5252";
-        rocket.style.opacity = "0";
-        actionBtn.innerText = "CRASHED AT " + multiplier.toFixed(2) + "x";
-
-        // ৩ সেকেন্ড পর আবার নতুন রাউন্ড শুরু
-        setTimeout(startNewRound, 3000);
+    function doCrash() {
+        isFlying = false;
+        document.getElementById('multiplier').style.color = "var(--danger-red)";
+        document.getElementById('rocket').style.opacity = "0";
+        document.getElementById('cashBtn').style.display = 'none';
+        document.getElementById('betBtn').style.display = 'block';
+        myBet = 0;
+        setTimeout(startLoop, 3000);
     }
 
-    // গেমটি প্রথমবার চালু করা
-    startNewRound();
+    // ৩. বেটিং এবং ব্যালেন্স কাটা (API এর মাধ্যমে)
+    async function placeBet() {
+        let amt = parseFloat(document.getElementById('betAmount').value);
+        if(currentBalance < amt) return alert("Low Balance!");
+        
+        myBet = amt;
+        currentBalance -= amt;
+        document.getElementById('balance').innerText = currentBalance.toFixed(2);
+        
+        // এখানে এপিআই-তে ডাটা পাঠাবেন যাতে ইউজারের টাকা কাটে
+        // fetch(`${API_URL}?action=bet&phone=${userPhone}&amount=${amt}`);
+    }
+
+    async function cashOut() {
+        if(!isFlying || hasCashedOut) return;
+        hasCashedOut = true;
+        let winAmt = (myBet * multiplier).toFixed(2);
+        currentBalance += parseFloat(winAmt);
+        document.getElementById('balance').innerText = currentBalance.toFixed(2);
+        
+        alert("You Won: " + winAmt);
+        document.getElementById('cashBtn').style.display = 'none';
+        document.getElementById('betBtn').style.display = 'block';
+        
+        // এখানে এপিআই-তে ডাটা পাঠাবেন যাতে ইউজারের টাকা যোগ হয়
+        // fetch(`${API_URL}?action=win&phone=${userPhone}&amount=${winAmt}`);
+    }
+
+    fetchUserBalance();
+    startLoop();
 </script>
 </body>
 </html>
