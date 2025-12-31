@@ -3,279 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Based Online Rocket Crash</title>
+    <title>Rocket Game - Live API Version</title>
     <style>
-        :root {
-            --bg-color: #050a18;
-            --accent-green: #00e676;
-            --danger-red: #ff5252;
-            --card-bg: #151a24;
-        }
+        :root { --bg: #050a18; --accent: #00e676; --danger: #ff5252; --card: #151a24; }
+        body { margin: 0; background: var(--bg); color: white; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        body {
-            margin: 0;
-            background-color: var(--bg-color);
-            color: white;
-            font-family: 'Poppins', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
+        .top-bar { width: 100%; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; background: rgba(0,0,0,0.5); border-bottom: 1px solid #222; }
+        .balance-box { background: rgba(0, 230, 118, 0.1); border: 1px solid var(--accent); padding: 6px 15px; border-radius: 20px; color: var(--accent); font-weight: bold; font-size: 18px; }
 
-        /* ব্যালেন্স ডিসপ্লে */
-        .header-bar {
-            width: 100%;
-            max-width: 450px;
-            padding: 15px;
-            display: flex;
-            justify-content: flex-end;
-            box-sizing: border-box;
-        }
-        .balance-badge {
-            background: rgba(0, 230, 118, 0.1);
-            border: 1px solid var(--accent-green);
-            padding: 8px 15px;
-            border-radius: 20px;
-            color: var(--accent-green);
-            font-weight: bold;
-        }
+        #game-area { flex: 1; position: relative; overflow: hidden; background: radial-gradient(circle at center, #1a2c5a, #050a18); display: flex; justify-content: center; align-items: center; }
+        #multiplier { font-size: 80px; font-weight: 900; color: var(--accent); z-index: 10; transform: translateY(-30px); }
+        #rocket { position: absolute; bottom: 80px; left: 30px; font-size: 60px; z-index: 5; transition: transform 0.1s linear; }
 
-        #game-container {
-            width: 100%;
-            max-width: 450px;
-            flex: 1;
-            background: radial-gradient(circle at top, #1a2c5a, #050a18);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #multiplier {
-            position: absolute;
-            top: 35%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 75px;
-            font-weight: 900;
-            color: var(--accent-green);
-            z-index: 10;
-        }
-
-        #rocket {
-            position: absolute;
-            bottom: 40px;
-            left: 20px;
-            font-size: 60px;
-            z-index: 5;
-            transform: rotate(45deg);
-            filter: drop-shadow(0 0 15px var(--accent-green));
-            transition: transform 0.1s linear;
-        }
-
-        /* গোল টাইমার ডিজাইন */
-        .timer-wrap {
-            position: absolute;
-            top: 55%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 130px;
-            height: 130px;
-            display: none;
-            z-index: 100;
-        }
+        .timer-container { position: absolute; display: none; z-index: 20; transform: translateY(-30px); }
         svg { width: 130px; height: 130px; transform: rotate(-90deg); }
-        circle { fill: none; stroke-width: 10; stroke-linecap: round; }
-        .bg-circle { stroke: rgba(255,255,255,0.05); }
-        .progress-circle {
-            stroke: var(--accent-green);
-            stroke-dasharray: 377;
-            stroke-dashoffset: 377;
-            transition: stroke-dashoffset 1s linear;
-        }
-        #timer-num {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 40px;
-            font-weight: bold;
-        }
+        .circle-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+        .circle-progress { fill: none; stroke: var(--accent); stroke-width: 8; stroke-dasharray: 345; stroke-dashoffset: 345; transition: stroke-dashoffset 1s linear; }
+        #timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-weight: bold; }
 
-        /* কন্ট্রোল এরিয়া */
-        .footer {
-            width: 100%;
-            max-width: 450px;
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 30px 30px 0 0;
-            box-sizing: border-box;
-            text-align: center;
-        }
-        .bet-input {
-            width: 100%;
-            background: #0b0e14;
-            border: 1px solid #333;
-            color: white;
-            padding: 15px;
-            font-size: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .btn-main {
-            width: 100%;
-            height: 60px;
-            background: var(--accent-green);
-            border: none;
-            border-radius: 15px;
-            font-size: 22px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn-cashout { background: var(--warning, #ffab40); display: none; }
+        .floating-win { position: absolute; font-size: 45px; font-weight: bold; color: var(--accent); z-index: 1000; animation: floatUp 1.5s ease-out forwards; text-shadow: 0 0 20px rgba(0,230,118,0.5); }
+        @keyframes floatUp { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-150px); } }
+
+        .controls { width: 100%; background: var(--card); padding: 20px; border-radius: 30px 30px 0 0; box-sizing: border-box; box-shadow: 0 -10px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 12px; padding-bottom: 40px; }
+
+        .input-wrapper { background: #0b0e14; border: 1px solid #333; border-radius: 15px; display: flex; align-items: center; padding: 5px 15px; }
+        .input-label { color: #777; font-size: 14px; font-weight: bold; margin-right: 10px; }
+        .input-box { flex: 1; background: transparent; border: none; color: white; padding: 12px; text-align: right; font-size: 24px; font-weight: bold; outline: none; width: 100%; }
+
+        .btn { width: 100%; height: 65px; border: none; border-radius: 18px; font-size: 22px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-bet { background: var(--accent); color: #000; }
+        .btn-cash { background: #ffab40; color: #000; display: none; }
+        .btn-wait { background: #222; color: #555; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <div class="header-bar">
-        <div class="balance-badge">৳ <span id="balance">0.00</span></div>
+    <div class="top-bar">
+        <span id="userId" style="font-size: 14px; color: #888;">User: Connecting...</span>
+        <div class="balance-box">৳ <span id="userBalance">0.00</span></div>
     </div>
 
-    <div id="game-container">
+    <div id="game-area">
         <div id="multiplier">1.00x</div>
         <div id="rocket">🚀</div>
 
-        <div class="timer-wrap" id="timerBox">
-            <svg>
-                <circle class="bg-circle" cx="65" cy="65" r="60"></circle>
-                <circle class="progress-circle" id="circleBar" cx="65" cy="65" r="60"></circle>
-            </svg>
-            <div id="timer-num">10</div>
+        <div class="timer-container" id="timerBox">
+            <svg><circle class="circle-bg" cx="65" cy="65" r="60"></circle><circle class="circle-progress" id="progressBar" cx="65" cy="65" r="60"></circle></svg>
+            <div id="timer-text">10</div>
         </div>
     </div>
 
-    <div class="footer">
-        <input type="number" id="betAmount" class="bet-input" value="10">
-        <button id="betBtn" class="btn-main" onclick="placeBet()">PLACE BET</button>
-        <button id="cashBtn" class="btn-main btn-cashout" onclick="cashOut()">CASH OUT</button>
+    <div class="controls">
+        <div class="input-wrapper">
+            <span class="input-label">AMOUNT</span>
+            <input type="number" id="betInput" class="input-box" value="10">
+        </div>
+        <button id="mainBtn" class="btn btn-bet" onclick="placeBet()">PLACE BET</button>
+        <button id="cashBtn" class="btn btn-cash" onclick="cashOut()">CASH OUT</button>
     </div>
 
 <script>
-    // --- অ্যাডমিন এপিআই সেটিংস ---
-    const API_URL = "আপনার_এডমিন_প্যানেল_লিঙ্ক/api/balance.php"; // এখান থেকে ব্যালেন্স আপডেট হবে
+    // --- API Configuration ---
     const urlParams = new URLSearchParams(window.location.search);
-    const userPhone = urlParams.get('user');
+    const userPhone = urlParams.get('user'); // ইউজার আইডি URL থেকে নিবে
+    const API_URL = "https://yourdomain.com/api/rocket_api.php"; // আপনার PHP API লিঙ্ক এখানে দিন
 
-    let currentBalance = 1000; // ডিফল্ট ব্যালেন্স (এপিআই থেকে আসবে)
-    let myBet = 0;
+    let balance = 0;
     let multiplier = 1.00;
+    let betAmount = 0;
     let isFlying = false;
     let hasCashedOut = false;
     let gameInterval;
 
-    // ১. ব্যালেন্স লোড করা (আপনার অ্যাডমিন এপিআই থেকে)
-    async function fetchUserBalance() {
-        if(!userPhone) return;
+    // ১. সার্ভার থেকে ইউজারের আসল ব্যালেন্স আনা
+    async function syncBalance() {
+        if(!userPhone) {
+            document.getElementById('userId').innerText = "User Not Found";
+            return;
+        }
         try {
-            const response = await fetch(`${API_URL}?phone=${userPhone}`);
+            const response = await fetch(`${API_URL}?action=get_balance&user=${userPhone}`);
             const data = await response.json();
-            currentBalance = data.balance;
-            document.getElementById('balance').innerText = currentBalance.toFixed(2);
-        } catch (e) { console.log("API Error, using local storage"); }
+            balance = parseFloat(data.balance);
+            document.getElementById('userBalance').innerText = balance.toFixed(2);
+            document.getElementById('userId').innerText = "User: " + userPhone;
+        } catch (e) {
+            console.log("Error syncing balance");
+        }
     }
 
-    // ২. গেম লজিক (অটোমেটিক চলবে)
-    function startLoop() {
-        multiplier = 1.00;
-        hasCashedOut = false;
-        document.getElementById('multiplier').style.color = "var(--accent-green)";
+    function startCycle() {
+        multiplier = 1.00; isFlying = false; hasCashedOut = false;
+        document.getElementById('multiplier').innerText = "1.00x";
+        document.getElementById('multiplier').style.color = "var(--accent)";
         document.getElementById('rocket').style.opacity = "1";
-        document.getElementById('rocket').style.transform = "translate(0,0) rotate(45deg)";
-        
+        document.getElementById('rocket').style.transform = "translate(0, 0)";
+        document.getElementById('mainBtn').style.display = "block";
+        document.getElementById('mainBtn').className = "btn btn-bet";
+        document.getElementById('mainBtn').innerText = "PLACE BET";
+        document.getElementById('mainBtn').disabled = false;
+        document.getElementById('cashBtn').style.display = "none";
+        syncBalance(); // প্রতি রাউন্ডের শুরুতে ব্যালেন্স আপডেট করবে
         showTimer(10);
     }
 
     function showTimer(sec) {
         document.getElementById('timerBox').style.display = 'block';
         let left = sec;
-        let countdown = setInterval(() => {
+        let t = setInterval(() => {
             left--;
-            document.getElementById('circleBar').style.strokeDashoffset = 377 - (left/sec)*377;
-            document.getElementById('timer-num').innerText = left;
-            if(left <= 0) {
-                clearInterval(countdown);
-                document.getElementById('timerBox').style.display = 'none';
-                launch();
-            }
+            document.getElementById('progressBar').style.strokeDashoffset = 345 - (left/sec)*345;
+            document.getElementById('timer-text').innerText = left;
+            if(left <= 0) { clearInterval(t); document.getElementById('timerBox').style.display = 'none'; launch(); }
         }, 1000);
+    }
+
+    async function placeBet() {
+        let amt = parseFloat(document.getElementById('betInput').value);
+        if(!userPhone) return alert("Please Login First!");
+        if(amt > balance) return alert("Low Balance!");
+        
+        // এপিআই কল করে ব্যালেন্স কাটা
+        try {
+            await fetch(`${API_URL}?action=bet&user=${userPhone}&amount=${amt}`);
+            betAmount = amt;
+            balance -= amt;
+            document.getElementById('userBalance').innerText = balance.toFixed(2);
+            document.getElementById('mainBtn').innerText = "WAITING...";
+            document.getElementById('mainBtn').disabled = true;
+            document.getElementById('mainBtn').classList.add('btn-wait');
+        } catch(e) { alert("Server Error!"); }
     }
 
     function launch() {
         isFlying = true;
-        let crashPoint = (Math.random() * 3 + 1.1).toFixed(2);
-        
-        if(myBet > 0) {
-            document.getElementById('betBtn').style.display = 'none';
-            document.getElementById('cashBtn').style.display = 'block';
+        let crashPoint = (Math.random() * 4 + 1.2).toFixed(2);
+        if(betAmount > 0) { 
+            document.getElementById('mainBtn').style.display = "none"; 
+            document.getElementById('cashBtn').style.display = "block"; 
         }
 
         gameInterval = setInterval(() => {
-            multiplier += 0.03;
+            multiplier += 0.04;
             document.getElementById('multiplier').innerText = multiplier.toFixed(2) + "x";
-            
-            // রকেটের সুন্দর কোণাকুণি মুভমেন্ট
-            let x = (multiplier - 1) * 80;
-            let y = (multiplier - 1) * 60;
-            document.getElementById('rocket').style.transform = `translate(${x}px, -${y}px) rotate(45deg)`;
-
-            if(multiplier >= crashPoint) {
-                clearInterval(gameInterval);
-                doCrash();
-            }
+            let x = (multiplier - 1) * 75;
+            let y = (multiplier - 1) * 65;
+            document.getElementById('rocket').style.transform = `translate(${x}px, -${y}px)`;
+            if(multiplier >= crashPoint) { clearInterval(gameInterval); crash(); }
         }, 100);
     }
 
-    function doCrash() {
-        isFlying = false;
-        document.getElementById('multiplier').style.color = "var(--danger-red)";
-        document.getElementById('rocket').style.opacity = "0";
-        document.getElementById('cashBtn').style.display = 'none';
-        document.getElementById('betBtn').style.display = 'block';
-        myBet = 0;
-        setTimeout(startLoop, 3000);
-    }
-
-    // ৩. বেটিং এবং ব্যালেন্স কাটা (API এর মাধ্যমে)
-    async function placeBet() {
-        let amt = parseFloat(document.getElementById('betAmount').value);
-        if(currentBalance < amt) return alert("Low Balance!");
-        
-        myBet = amt;
-        currentBalance -= amt;
-        document.getElementById('balance').innerText = currentBalance.toFixed(2);
-        
-        // এখানে এপিআই-তে ডাটা পাঠাবেন যাতে ইউজারের টাকা কাটে
-        // fetch(`${API_URL}?action=bet&phone=${userPhone}&amount=${amt}`);
+    function showWinAnimation(amount) {
+        const winTxt = document.createElement('div');
+        winTxt.className = 'floating-win';
+        winTxt.innerText = "+৳" + amount.toFixed(2);
+        document.getElementById('game-area').appendChild(winTxt);
+        setTimeout(() => { winTxt.remove(); }, 1500);
     }
 
     async function cashOut() {
         if(!isFlying || hasCashedOut) return;
         hasCashedOut = true;
-        let winAmt = (myBet * multiplier).toFixed(2);
-        currentBalance += parseFloat(winAmt);
-        document.getElementById('balance').innerText = currentBalance.toFixed(2);
+        let win = betAmount * multiplier;
         
-        alert("You Won: " + winAmt);
-        document.getElementById('cashBtn').style.display = 'none';
-        document.getElementById('betBtn').style.display = 'block';
-        
-        // এখানে এপিআই-তে ডাটা পাঠাবেন যাতে ইউজারের টাকা যোগ হয়
-        // fetch(`${API_URL}?action=win&phone=${userPhone}&amount=${winAmt}`);
+        // এপিআই কল করে উইন হওয়া টাকা ব্যালেন্সে যোগ করা
+        try {
+            await fetch(`${API_URL}?action=win&user=${userPhone}&amount=${win}`);
+            balance += win;
+            document.getElementById('userBalance').innerText = balance.toFixed(2);
+            showWinAnimation(win);
+            document.getElementById('cashBtn').style.display = "none";
+            document.getElementById('mainBtn').style.display = "block";
+            document.getElementById('mainBtn').innerText = "WON ৳" + win.toFixed(2);
+            betAmount = 0;
+        } catch(e) { alert("Win sync error!"); }
     }
 
-    fetchUserBalance();
-    startLoop();
+    function crash() {
+        isFlying = false;
+        document.getElementById('multiplier').style.color = "var(--danger)";
+        document.getElementById('rocket').style.opacity = "0";
+        document.getElementById('cashBtn').style.display = "none";
+        document.getElementById('mainBtn').style.display = "block";
+        document.getElementById('mainBtn').innerText = "CRASHED!";
+        betAmount = 0;
+        setTimeout(startCycle, 3000);
+    }
+
+    startCycle();
 </script>
 </body>
 </html>
